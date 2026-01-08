@@ -4,7 +4,7 @@ import { NamedError } from "@opencode-ai/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
 import { Identifier } from "../id/id"
 import { LSP } from "../lsp"
-import { Snapshot } from "@/snapshot"
+import { SessionSummary } from "./summary"
 import { fn } from "@/util/fn"
 import { Storage } from "@/storage/storage"
 import { ProviderTransform } from "@/provider/transform"
@@ -304,7 +304,7 @@ export namespace MessageV2 {
       .object({
         title: z.string().optional(),
         body: z.string().optional(),
-        diffs: Snapshot.FileDiff.array(),
+        diffs: SessionSummary.FileDiff.array(),
       })
       .optional(),
     agent: z.string(),

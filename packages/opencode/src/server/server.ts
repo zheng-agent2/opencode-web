@@ -16,10 +16,8 @@ import { ModelsDev } from "../provider/models"
 import { Ripgrep } from "../file/ripgrep"
 import { Config } from "../config/config"
 import { File } from "../file"
-import { LSP } from "../lsp"
 import { Format } from "../format"
 import { MessageV2 } from "../session/message-v2"
-import { TuiRoute } from "./tui"
 import { Instance } from "../project/instance"
 import { Project } from "../project/project"
 import { Vcs } from "../project/vcs"
@@ -40,13 +38,10 @@ import { InstanceBootstrap } from "../project/bootstrap"
 import { MCP } from "../mcp"
 import { Storage } from "../storage/storage"
 import type { ContentfulStatusCode } from "hono/utils/http-status"
-import { TuiEvent } from "@/cli/cmd/tui/event"
-import { Snapshot } from "@/snapshot"
 import { SessionSummary } from "@/session/summary"
 import { SessionStatus } from "@/session/status"
 import { upgradeWebSocket, websocket } from "hono/bun"
 import { errors } from "./error"
-import { Pty } from "@/pty"
 import { PermissionNext } from "@/permission/next"
 import { Installation } from "@/installation"
 import { MDNS } from "./mdns"
@@ -276,165 +271,6 @@ export namespace Server {
       .use(validator("query", z.object({ directory: z.string().optional() })))
 
       .route("/project", ProjectRoute)
-
-      .get(
-        "/pty",
-        describeRoute({
-          summary: "List PTY sessions",
-          description: "Get a list of all active pseudo-terminal (PTY) sessions managed by OpenCode.",
-          operationId: "pty.list",
-          responses: {
-            200: {
-              description: "List of sessions",
-              content: {
-                "application/json": {
-                  schema: resolver(Pty.Info.array()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          return c.json(Pty.list())
-        },
-      )
-      .post(
-        "/pty",
-        describeRoute({
-          summary: "Create PTY session",
-          description: "Create a new pseudo-terminal (PTY) session for running shell commands and processes.",
-          operationId: "pty.create",
-          responses: {
-            200: {
-              description: "Created session",
-              content: {
-                "application/json": {
-                  schema: resolver(Pty.Info),
-                },
-              },
-            },
-            ...errors(400),
-          },
-        }),
-        validator("json", Pty.CreateInput),
-        async (c) => {
-          const info = await Pty.create(c.req.valid("json"))
-          return c.json(info)
-        },
-      )
-      .get(
-        "/pty/:ptyID",
-        describeRoute({
-          summary: "Get PTY session",
-          description: "Retrieve detailed information about a specific pseudo-terminal (PTY) session.",
-          operationId: "pty.get",
-          responses: {
-            200: {
-              description: "Session info",
-              content: {
-                "application/json": {
-                  schema: resolver(Pty.Info),
-                },
-              },
-            },
-            ...errors(404),
-          },
-        }),
-        validator("param", z.object({ ptyID: z.string() })),
-        async (c) => {
-          const info = Pty.get(c.req.valid("param").ptyID)
-          if (!info) {
-            throw new Storage.NotFoundError({ message: "Session not found" })
-          }
-          return c.json(info)
-        },
-      )
-      .put(
-        "/pty/:ptyID",
-        describeRoute({
-          summary: "Update PTY session",
-          description: "Update properties of an existing pseudo-terminal (PTY) session.",
-          operationId: "pty.update",
-          responses: {
-            200: {
-              description: "Updated session",
-              content: {
-                "application/json": {
-                  schema: resolver(Pty.Info),
-                },
-              },
-            },
-            ...errors(400),
-          },
-        }),
-        validator("param", z.object({ ptyID: z.string() })),
-        validator("json", Pty.UpdateInput),
-        async (c) => {
-          const info = await Pty.update(c.req.valid("param").ptyID, c.req.valid("json"))
-          return c.json(info)
-        },
-      )
-      .delete(
-        "/pty/:ptyID",
-        describeRoute({
-          summary: "Remove PTY session",
-          description: "Remove and terminate a specific pseudo-terminal (PTY) session.",
-          operationId: "pty.remove",
-          responses: {
-            200: {
-              description: "Session removed",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(404),
-          },
-        }),
-        validator("param", z.object({ ptyID: z.string() })),
-        async (c) => {
-          await Pty.remove(c.req.valid("param").ptyID)
-          return c.json(true)
-        },
-      )
-      .get(
-        "/pty/:ptyID/connect",
-        describeRoute({
-          summary: "Connect to PTY session",
-          description:
-            "Establish a WebSocket connection to interact with a pseudo-terminal (PTY) session in real-time.",
-          operationId: "pty.connect",
-          responses: {
-            200: {
-              description: "Connected session",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(404),
-          },
-        }),
-        validator("param", z.object({ ptyID: z.string() })),
-        upgradeWebSocket((c) => {
-          const id = c.req.param("ptyID")
-          let handler: ReturnType<typeof Pty.connect>
-          if (!Pty.get(id)) throw new Error("Session not found")
-          return {
-            onOpen(_event, ws) {
-              handler = Pty.connect(id, ws)
-            },
-            onMessage(event) {
-              handler?.onMessage(String(event.data))
-            },
-            onClose() {
-              handler?.onClose()
-            },
-          }
-        }),
-      )
 
       .get(
         "/config",
@@ -1086,7 +922,7 @@ export namespace Server {
               description: "Successfully retrieved diff",
               content: {
                 "application/json": {
-                  schema: resolver(Snapshot.FileDiff.array()),
+                  schema: resolver(SessionSummary.FileDiff.array()),
                 },
               },
             },
@@ -1254,7 +1090,7 @@ export namespace Server {
               description: "List of diffs",
               content: {
                 "application/json": {
-                  schema: resolver(Snapshot.FileDiff.array()),
+                  schema: resolver(SessionSummary.FileDiff.array()),
                 },
               },
             },
@@ -1972,7 +1808,7 @@ export namespace Server {
               description: "Symbols",
               content: {
                 "application/json": {
-                  schema: resolver(LSP.Symbol.array()),
+                  schema: resolver(z.array(z.any())),
                 },
               },
             },
@@ -1985,11 +1821,6 @@ export namespace Server {
           }),
         ),
         async (c) => {
-          /*
-          const query = c.req.valid("query").query
-          const result = await LSP.workspaceSymbol(query)
-          return c.json(result)
-          */
           return c.json([])
         },
       )
@@ -2393,14 +2224,14 @@ export namespace Server {
               description: "LSP server status",
               content: {
                 "application/json": {
-                  schema: resolver(LSP.Status.array()),
+                  schema: resolver(z.array(z.any())),
                 },
               },
             },
           },
         }),
         async (c) => {
-          return c.json(await LSP.status())
+          return c.json([])
         },
       )
       .get(
@@ -2424,301 +2255,6 @@ export namespace Server {
           return c.json(await Format.status())
         },
       )
-      .post(
-        "/tui/append-prompt",
-        describeRoute({
-          summary: "Append TUI prompt",
-          description: "Append prompt to the TUI",
-          operationId: "tui.appendPrompt",
-          responses: {
-            200: {
-              description: "Prompt processed successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(400),
-          },
-        }),
-        validator("json", TuiEvent.PromptAppend.properties),
-        async (c) => {
-          await Bus.publish(TuiEvent.PromptAppend, c.req.valid("json"))
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/open-help",
-        describeRoute({
-          summary: "Open help dialog",
-          description: "Open the help dialog in the TUI to display user assistance information.",
-          operationId: "tui.openHelp",
-          responses: {
-            200: {
-              description: "Help dialog opened successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          // TODO: open dialog
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/open-sessions",
-        describeRoute({
-          summary: "Open sessions dialog",
-          description: "Open the session dialog",
-          operationId: "tui.openSessions",
-          responses: {
-            200: {
-              description: "Session dialog opened successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          await Bus.publish(TuiEvent.CommandExecute, {
-            command: "session.list",
-          })
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/open-themes",
-        describeRoute({
-          summary: "Open themes dialog",
-          description: "Open the theme dialog",
-          operationId: "tui.openThemes",
-          responses: {
-            200: {
-              description: "Theme dialog opened successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          await Bus.publish(TuiEvent.CommandExecute, {
-            command: "session.list",
-          })
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/open-models",
-        describeRoute({
-          summary: "Open models dialog",
-          description: "Open the model dialog",
-          operationId: "tui.openModels",
-          responses: {
-            200: {
-              description: "Model dialog opened successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          await Bus.publish(TuiEvent.CommandExecute, {
-            command: "model.list",
-          })
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/submit-prompt",
-        describeRoute({
-          summary: "Submit TUI prompt",
-          description: "Submit the prompt",
-          operationId: "tui.submitPrompt",
-          responses: {
-            200: {
-              description: "Prompt submitted successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          await Bus.publish(TuiEvent.CommandExecute, {
-            command: "prompt.submit",
-          })
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/clear-prompt",
-        describeRoute({
-          summary: "Clear TUI prompt",
-          description: "Clear the prompt",
-          operationId: "tui.clearPrompt",
-          responses: {
-            200: {
-              description: "Prompt cleared successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        async (c) => {
-          await Bus.publish(TuiEvent.CommandExecute, {
-            command: "prompt.clear",
-          })
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/execute-command",
-        describeRoute({
-          summary: "Execute TUI command",
-          description: "Execute a TUI command (e.g. agent_cycle)",
-          operationId: "tui.executeCommand",
-          responses: {
-            200: {
-              description: "Command executed successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(400),
-          },
-        }),
-        validator("json", z.object({ command: z.string() })),
-        async (c) => {
-          const command = c.req.valid("json").command
-          await Bus.publish(TuiEvent.CommandExecute, {
-            // @ts-expect-error
-            command: {
-              session_new: "session.new",
-              session_share: "session.share",
-              session_interrupt: "session.interrupt",
-              session_compact: "session.compact",
-              messages_page_up: "session.page.up",
-              messages_page_down: "session.page.down",
-              messages_half_page_up: "session.half.page.up",
-              messages_half_page_down: "session.half.page.down",
-              messages_first: "session.first",
-              messages_last: "session.last",
-              agent_cycle: "agent.cycle",
-            }[command],
-          })
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/show-toast",
-        describeRoute({
-          summary: "Show TUI toast",
-          description: "Show a toast notification in the TUI",
-          operationId: "tui.showToast",
-          responses: {
-            200: {
-              description: "Toast notification shown successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-          },
-        }),
-        validator("json", TuiEvent.ToastShow.properties),
-        async (c) => {
-          await Bus.publish(TuiEvent.ToastShow, c.req.valid("json"))
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/publish",
-        describeRoute({
-          summary: "Publish TUI event",
-          description: "Publish a TUI event",
-          operationId: "tui.publish",
-          responses: {
-            200: {
-              description: "Event published successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(400),
-          },
-        }),
-        validator(
-          "json",
-          z.union(
-            Object.values(TuiEvent).map((def) => {
-              return z
-                .object({
-                  type: z.literal(def.type),
-                  properties: def.properties,
-                })
-                .meta({
-                  ref: "Event" + "." + def.type,
-                })
-            }),
-          ),
-        ),
-        async (c) => {
-          const evt = c.req.valid("json")
-          await Bus.publish(Object.values(TuiEvent).find((def) => def.type === evt.type)!, evt.properties)
-          return c.json(true)
-        },
-      )
-      .post(
-        "/tui/select-session",
-        describeRoute({
-          summary: "Select session",
-          description: "Navigate the TUI to display the specified session.",
-          operationId: "tui.selectSession",
-          responses: {
-            200: {
-              description: "Session selected successfully",
-              content: {
-                "application/json": {
-                  schema: resolver(z.boolean()),
-                },
-              },
-            },
-            ...errors(400, 404),
-          },
-        }),
-        validator("json", TuiEvent.SessionSelect.properties),
-        async (c) => {
-          const { sessionID } = c.req.valid("json")
-          await Session.get(sessionID)
-          await Bus.publish(TuiEvent.SessionSelect, { sessionID })
-          return c.json(true)
-        },
-      )
-      .route("/tui/control", TuiRoute)
       .put(
         "/auth/:providerID",
         describeRoute({

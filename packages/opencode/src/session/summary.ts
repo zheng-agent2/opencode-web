@@ -6,10 +6,10 @@ import { Session } from "."
 
 import { MessageV2 } from "./message-v2"
 import { Identifier } from "@/id/id"
-import { Snapshot } from "@/snapshot"
 
 import { Log } from "@/util/log"
 import path from "path"
+
 import { Instance } from "@/project/instance"
 import { Storage } from "@/storage/storage"
 import { Bus } from "@/bus"
@@ -19,6 +19,12 @@ import { Agent } from "@/agent/agent"
 
 export namespace SessionSummary {
   const log = Log.create({ service: "session.summary" })
+
+  export const FileDiff = z.object({
+    file: z.string(),
+    additions: z.number(),
+    deletions: z.number(),
+  })
 
   export const summarize = fn(
     z.object({
@@ -160,7 +166,7 @@ export namespace SessionSummary {
       messageID: Identifier.schema("message").optional(),
     }),
     async (input) => {
-      return Storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).catch(() => [])
+      return Storage.read<z.infer<typeof FileDiff>[]>(["session_diff", input.sessionID]).catch(() => [])
     },
   )
 
@@ -188,7 +194,10 @@ export namespace SessionSummary {
       }
     }
 
-    if (from && to) return Snapshot.diffFull(from, to)
+    if (from && to) {
+      const { Snapshot } = await import("../snapshot")
+      return Snapshot.diffFull(from, to)
+    }
     return []
   }
 }

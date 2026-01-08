@@ -15,7 +15,7 @@ import { Instance } from "../project/instance"
 import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
 import { Command } from "../command"
-import { Snapshot } from "@/snapshot"
+import { SessionSummary } from "./summary"
 
 import type { Provider } from "@/provider/provider"
 import { PermissionNext } from "@/permission/next"
@@ -47,7 +47,7 @@ export namespace Session {
           additions: z.number(),
           deletions: z.number(),
           files: z.number(),
-          diffs: Snapshot.FileDiff.array().optional(),
+          diffs: SessionSummary.FileDiff.array().optional(),
         })
         .optional(),
       share: z
@@ -111,7 +111,7 @@ export namespace Session {
       "session.diff",
       z.object({
         sessionID: z.string(),
-        diff: Snapshot.FileDiff.array(),
+        diff: SessionSummary.FileDiff.array(),
       }),
     ),
     Error: BusEvent.define(
@@ -266,7 +266,7 @@ export namespace Session {
   }
 
   export const diff = fn(Identifier.schema("session"), async (sessionID) => {
-    const diffs = await Storage.read<Snapshot.FileDiff[]>(["session_diff", sessionID])
+    const diffs = await Storage.read<z.infer<typeof SessionSummary.FileDiff>[]>(["session_diff", sessionID])
     return diffs ?? []
   })
 
