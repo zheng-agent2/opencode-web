@@ -926,6 +926,15 @@ export namespace Config {
           url: z.string().optional().describe("Enterprise URL"),
         })
         .optional(),
+      supabase: z
+        .object({
+          url: z.string().describe("Supabase project URL"),
+          serviceKey: z.string().describe("Supabase service role key"),
+          bucket: z.string().default("opencode-files").describe("Storage bucket name"),
+          projectId: z.string().describe("Cloud project identifier for syncing files"),
+        })
+        .optional()
+        .describe("Supabase storage configuration for cloud sync"),
       compaction: z
         .object({
           auto: z.boolean().optional().describe("Enable automatic compaction when context is full (default: true)"),

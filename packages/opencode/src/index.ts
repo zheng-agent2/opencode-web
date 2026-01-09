@@ -10,6 +10,7 @@ import { ExportCommand } from "./cli/cmd/export"
 import { ImportCommand } from "./cli/cmd/import"
 import { EOL } from "os"
 import { WebCommand } from "./cli/cmd/web"
+import { CloudCommand } from "./cli/cmd/cloud"
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
@@ -65,6 +66,7 @@ const cli = yargs(hideBin(process.argv))
   .command(ModelsCommand)
   .command(ExportCommand)
   .command(ImportCommand)
+  .command(CloudCommand)
   .fail((msg) => {
     if (
       msg.startsWith("Unknown argument") ||

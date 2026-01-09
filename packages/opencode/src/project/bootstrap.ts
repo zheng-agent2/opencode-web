@@ -10,9 +10,27 @@ import { Instance } from "./instance"
 import { Vcs } from "./vcs"
 import { Log } from "@/util/log"
 import { ShareNext } from "@/share/share-next"
+import { CloudSync } from "@/remote-storage"
 
 export async function InstanceBootstrap() {
   Log.Default.info("bootstrapping", { directory: Instance.directory })
+
+  // Initialize cloud sync first if configured (auto-pull from Supabase)
+  try {
+    const cloudResult = await CloudSync.initFromConfig()
+    if (cloudResult.synced) {
+      Log.Default.info("cloud sync initialized", {
+        fileCount: cloudResult.fileCount,
+        directory: Instance.directory,
+      })
+    }
+  } catch (err) {
+    Log.Default.error("cloud sync initialization failed", {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    // Continue with local files if cloud sync fails
+  }
+
   await Plugin.init()
   Share.init()
   ShareNext.init()

@@ -19,6 +19,7 @@ import { TextField } from "@opencode-ai/ui/text-field"
 import { DialogSelectServer } from "@/components/dialog-select-server"
 import { SessionLspIndicator } from "@/components/session-lsp-indicator"
 import { SessionMcpIndicator } from "@/components/session-mcp-indicator"
+import { SessionCloudSync } from "@/components/session-cloud-sync"
 import type { Session } from "@opencode-ai/sdk/v2/client"
 import { same } from "@/utils/same"
 
@@ -163,6 +164,7 @@ export function SessionHeader() {
             </Button>
             <SessionLspIndicator />
             <SessionMcpIndicator />
+            <SessionCloudSync />
           </div>
           <div class="flex items-center gap-1">
             <Show when={currentSession()?.summary?.files}>

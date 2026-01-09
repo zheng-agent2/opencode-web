@@ -46,6 +46,7 @@ import { PermissionNext } from "@/permission/next"
 import { Installation } from "@/installation"
 import { MDNS } from "./mdns"
 import { Worktree } from "../worktree"
+import { CloudSync } from "../remote-storage"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -319,6 +320,168 @@ export namespace Server {
           return c.json(config)
         },
       )
+
+      // Cloud sync endpoints
+      .get(
+        "/cloud/status",
+        describeRoute({
+          summary: "Get cloud sync status",
+          description: "Get the status of files changed since last cloud sync.",
+          operationId: "cloud.status",
+          responses: {
+            200: {
+              description: "Cloud sync status",
+              content: {
+                "application/json": {
+                  schema: resolver(
+                    z
+                      .object({
+                        configured: z.boolean(),
+                        projectId: z.string().nullable(),
+                        lastSync: z.string().nullable(),
+                        changes: z.array(
+                          z.object({
+                            path: z.string(),
+                            status: z.enum(["added", "modified", "deleted"]),
+                            localSize: z.number().optional(),
+                            remoteSize: z.number().optional(),
+                          }),
+                        ),
+                      })
+                      .meta({ ref: "CloudSyncStatus" }),
+                  ),
+                },
+              },
+            },
+            ...errors(400),
+          },
+        }),
+        async (c) => {
+          const configured = await CloudSync.isConfigured()
+          const projectId = await CloudSync.getConfiguredProjectId()
+          const lastSync = await CloudSync.getLastSync()
+
+          if (!configured || !projectId) {
+            return c.json({
+              configured: false,
+              projectId: null,
+              lastSync: null,
+              changes: [],
+            })
+          }
+
+          const changes = await CloudSync.status(projectId)
+          return c.json({
+            configured: true,
+            projectId,
+            lastSync: lastSync?.toISOString() ?? null,
+            changes,
+          })
+        },
+      )
+      .post(
+        "/cloud/push",
+        describeRoute({
+          summary: "Push changes to cloud",
+          description: "Upload local file changes to Supabase cloud storage.",
+          operationId: "cloud.push",
+          responses: {
+            200: {
+              description: "Push result",
+              content: {
+                "application/json": {
+                  schema: resolver(
+                    z
+                      .object({
+                        success: z.boolean(),
+                        uploaded: z.number(),
+                        deleted: z.number(),
+                        errors: z.array(z.string()),
+                      })
+                      .meta({ ref: "CloudPushResult" }),
+                  ),
+                },
+              },
+            },
+            ...errors(400),
+          },
+        }),
+        async (c) => {
+          const configured = await CloudSync.isConfigured()
+          const projectId = await CloudSync.getConfiguredProjectId()
+
+          if (!configured || !projectId) {
+            return c.json({
+              success: false,
+              uploaded: 0,
+              deleted: 0,
+              errors: ["Cloud sync not configured. Set supabase.projectId in config."],
+            })
+          }
+
+          const result = await CloudSync.push(projectId)
+          return c.json({
+            success: result.errors.length === 0,
+            uploaded: result.uploaded,
+            deleted: result.deleted,
+            errors: result.errors,
+          })
+        },
+      )
+      .post(
+        "/cloud/pull",
+        describeRoute({
+          summary: "Pull from cloud",
+          description: "Download files from Supabase cloud storage, overwriting local files.",
+          operationId: "cloud.pull",
+          responses: {
+            200: {
+              description: "Pull result",
+              content: {
+                "application/json": {
+                  schema: resolver(
+                    z
+                      .object({
+                        success: z.boolean(),
+                        fileCount: z.number(),
+                        error: z.string().optional(),
+                      })
+                      .meta({ ref: "CloudPullResult" }),
+                  ),
+                },
+              },
+            },
+            ...errors(400),
+          },
+        }),
+        async (c) => {
+          const configured = await CloudSync.isConfigured()
+          const projectId = await CloudSync.getConfiguredProjectId()
+
+          if (!configured || !projectId) {
+            return c.json({
+              success: false,
+              fileCount: 0,
+              error: "Cloud sync not configured. Set supabase.projectId in config.",
+            })
+          }
+
+          try {
+            const fileCount = await CloudSync.pull(projectId)
+            return c.json({
+              success: true,
+              fileCount,
+            })
+          } catch (err) {
+            return c.json({
+              success: false,
+              fileCount: 0,
+              error: err instanceof Error ? err.message : String(err),
+            })
+          }
+        },
+      )
+
       .get(
         "/experimental/tool/ids",
         describeRoute({

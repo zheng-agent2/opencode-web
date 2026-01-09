@@ -77,6 +77,7 @@
     "@parcel/watcher": "2.5.1",
     "@pierre/diffs": "catalog:",
     "@standard-schema/spec": "1.0.0",
+    "@supabase/supabase-js": "^2.49.1",
     "@zip.js/zip.js": "2.7.62",
     "ai": "catalog:",
     "chokidar": "4.0.3",
