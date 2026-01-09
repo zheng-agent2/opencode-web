@@ -138,7 +138,24 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
 
     const origin = createMemo(() => projectsKey(active()))
     const projectsList = createMemo(() => store.projects[origin()] ?? [])
-    const isLocal = createMemo(() => origin() === "local")
+    const isLocal = createMemo(() => {
+      const result = origin() === "local"
+      // #region agent log
+      fetch("http://127.0.0.1:7246/ingest/3f780156-45fe-4e83-a393-57f8a6744add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: "server.tsx:isLocal",
+          message: "isLocal computed",
+          data: { active: active(), origin: origin(), result },
+          timestamp: Date.now(),
+          sessionId: "debug-session",
+          hypothesisId: "A",
+        }),
+      }).catch(() => {})
+      // #endregion
+      return result
+    })
 
     return {
       ready: isReady,

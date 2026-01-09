@@ -292,9 +292,7 @@ export namespace SupabaseStorage {
   /**
    * Get file metadata
    */
-  export async function getMetadata(
-    remotePath: string,
-  ): Promise<{ size: number; lastModified: Date } | null> {
+  export async function getMetadata(remotePath: string): Promise<{ size: number; lastModified: Date } | null> {
     const supabase = await getClient()
     const bucket = await getBucket()
 
@@ -320,4 +318,3 @@ export namespace SupabaseStorage {
     }
   }
 }
-

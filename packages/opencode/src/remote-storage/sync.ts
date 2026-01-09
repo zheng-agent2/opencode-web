@@ -152,9 +152,7 @@ export namespace CloudSync {
         const relativePath = path.relative(localDir, fullPath)
 
         // Skip ignored directories and files
-        if (
-          [".git", "node_modules", ".next", "dist", "build", ".sync-meta.json"].includes(entry.name)
-        ) {
+        if ([".git", "node_modules", ".next", "dist", "build", ".sync-meta.json"].includes(entry.name)) {
           continue
         }
 
@@ -418,4 +416,3 @@ export namespace CloudSync {
     return metadata?.projectId ?? null
   }
 }
-

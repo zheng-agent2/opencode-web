@@ -59,12 +59,69 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
 
   async function fetchDirs(query: string) {
     const directory = root()
+    // #region agent log
+    const debugData2 = {
+      directory,
+      query,
+      home: home(),
+      sdkUrl: sdk.url,
+      syncHome: sync.data.path.home,
+      syncDir: sync.data.path.directory,
+    }
+    console.log("[DEBUG] fetchDirs called", debugData2)
+    fetch("http://127.0.0.1:7246/ingest/3f780156-45fe-4e83-a393-57f8a6744add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "dialog-select-directory.tsx:fetchDirs",
+        message: "fetchDirs called",
+        data: debugData2,
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        hypothesisId: "B,C,D",
+      }),
+    }).catch(() => {})
+    // #endregion
     if (!directory) return [] as string[]
 
     const results = await sdk.client.find
       .files({ directory, query, type: "directory", limit: 50 })
-      .then((x) => x.data ?? [])
-      .catch(() => [])
+      .then((x) => {
+        // #region agent log
+        console.log("[DEBUG] fetchDirs success", { resultCount: x.data?.length ?? 0, firstResult: x.data?.[0] })
+        fetch("http://127.0.0.1:7246/ingest/3f780156-45fe-4e83-a393-57f8a6744add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "dialog-select-directory.tsx:fetchDirs",
+            message: "fetchDirs success",
+            data: { resultCount: x.data?.length ?? 0, firstResult: x.data?.[0] },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            hypothesisId: "E",
+          }),
+        }).catch(() => {})
+        // #endregion
+        return x.data ?? []
+      })
+      .catch((e) => {
+        // #region agent log
+        console.log("[DEBUG] fetchDirs error", { error: e?.message })
+        fetch("http://127.0.0.1:7246/ingest/3f780156-45fe-4e83-a393-57f8a6744add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "dialog-select-directory.tsx:fetchDirs",
+            message: "fetchDirs error",
+            data: { error: e?.message },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            hypothesisId: "E",
+          }),
+        }).catch(() => {})
+        // #endregion
+        return []
+      })
 
     return results.map((x) => x.replace(/[\\/]+$/, ""))
   }

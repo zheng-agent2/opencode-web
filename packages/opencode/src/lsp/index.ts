@@ -14,4 +14,3 @@ export namespace LSP {
   })
   export type Range = z.infer<typeof Range>
 }
-

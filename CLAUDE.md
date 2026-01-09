@@ -11,6 +11,7 @@ OpenCode is an open-source AI coding agent with a client-server architecture. Th
 ## Development Commands
 
 ### Quick Start
+
 ```bash
 bun install              # Install dependencies
 bun dev                  # Run OpenCode TUI in packages/opencode directory
@@ -19,12 +20,14 @@ bun dev .                # Run OpenCode in repo root
 ```
 
 ### Testing
+
 ```bash
 bun test                 # Run tests (from packages/opencode)
 bun run --cwd packages/opencode test
 ```
 
 ### Building
+
 ```bash
 bun turbo typecheck      # Type check all packages
 bun run --cwd packages/opencode build     # Build opencode package
@@ -39,6 +42,7 @@ bun run --cwd packages/app dev              # Run web UI dev server
 ```
 
 ### SDK Generation
+
 ```bash
 ./script/generate.ts     # Regenerate JS SDK and related files after API changes
 ./packages/sdk/js/script/build.ts  # Regenerate JS SDK directly
@@ -49,7 +53,7 @@ bun run --cwd packages/app dev              # Run web UI dev server
 ### Core Packages
 
 - **packages/opencode**: Main OpenCode server and CLI logic
-  - `src/cli/`: CLI commands and TUI (built with SolidJS + opentui)
+  - `src/cli/`: CLI commands
   - `src/server/`: Hono-based API server
   - `src/session/`: Session management, message handling, LLM integration
   - `src/agent/`: Agent system and prompt management
@@ -97,9 +101,8 @@ bun run --cwd packages/app dev              # Run web UI dev server
 OpenCode uses a client-server model:
 
 1. **Server** (`src/server/server.ts`): Hono-based HTTP/WebSocket API
-2. **TUI Client** (`src/cli/cmd/tui/`): Terminal UI client
-3. **Web Client** (`packages/app`): Browser-based client
-4. **Desktop Client** (`packages/desktop`): Native app wrapping web client
+2. **Web Client** (`packages/app`): Browser-based client
+3. **Desktop Client** (`packages/desktop`): Native app wrapping web client
 
 Clients connect to the server via HTTP API or attach to running sessions.
 
@@ -125,6 +128,7 @@ Tools are the primary interface between the agent and the codebase:
 ### Session Management
 
 Sessions (`src/session/`) handle:
+
 - Message processing and LLM streaming
 - Context compaction (automatic summarization for unlimited context)
 - Truncation strategies for managing token limits
@@ -134,6 +138,7 @@ Sessions (`src/session/`) handle:
 ### LSP Integration
 
 OpenCode provides out-of-the-box LSP support:
+
 - LSP servers configured per language in `src/lsp/server.ts`
 - Client in `src/lsp/client.ts` manages server lifecycle
 - Exposed via LSP tool for agents to use
@@ -141,6 +146,7 @@ OpenCode provides out-of-the-box LSP support:
 ### MCP Integration
 
 Model Context Protocol support in `src/mcp/`:
+
 - OAuth integration for authenticated MCP servers
 - Server management and lifecycle
 - Headers and authentication handling
@@ -174,7 +180,6 @@ Follow the style guide in `STYLE_GUIDE.md`:
 
 - Always use parallel tool calls when operations are independent
 - After modifying `packages/opencode/src/server/server.ts`, regenerate SDK
-- TUI is built with SolidJS and opentui for terminal rendering
 - Desktop app requires Rust toolchain and Tauri prerequisites
 - Prettier config: no semicolons, 120 print width
 - Package manager: Bun 1.3+

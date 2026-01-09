@@ -4,20 +4,6 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {})
 }
 
-export type EventInstallationUpdated = {
-  type: "installation.updated"
-  properties: {
-    version: string
-  }
-}
-
-export type EventInstallationUpdateAvailable = {
-  type: "installation.update-available"
-  properties: {
-    version: string
-  }
-}
-
 export type Project = {
   id: string
   worktree: string
@@ -47,27 +33,47 @@ export type EventServerInstanceDisposed = {
   }
 }
 
-export type EventLspClientDiagnostics = {
-  type: "lsp.client.diagnostics"
+export type EventInstallationUpdated = {
+  type: "installation.updated"
   properties: {
-    serverID: string
-    path: string
+    version: string
   }
 }
 
-export type EventLspUpdated = {
-  type: "lsp.updated"
+export type EventInstallationUpdateAvailable = {
+  type: "installation.update-available"
   properties: {
+    version: string
+  }
+}
+
+export type PermissionRequest = {
+  id: string
+  sessionID: string
+  permission: string
+  patterns: Array<string>
+  metadata: {
     [key: string]: unknown
   }
+  always: Array<string>
+  tool?: {
+    messageID: string
+    callID: string
+  }
 }
 
-export type FileDiff = {
-  file: string
-  before: string
-  after: string
-  additions: number
-  deletions: number
+export type EventPermissionAsked = {
+  type: "permission.asked"
+  properties: PermissionRequest
+}
+
+export type EventPermissionReplied = {
+  type: "permission.replied"
+  properties: {
+    sessionID: string
+    requestID: string
+    reply: "once" | "always" | "reject"
+  }
 }
 
 export type UserMessage = {
@@ -80,7 +86,11 @@ export type UserMessage = {
   summary?: {
     title?: string
     body?: string
-    diffs: Array<FileDiff>
+    diffs: Array<{
+      file: string
+      additions: number
+      deletions: number
+    }>
   }
   agent: string
   model: {
@@ -232,22 +242,20 @@ export type FileSource = {
   path: string
 }
 
-export type Range = {
-  start: {
-    line: number
-    character: number
-  }
-  end: {
-    line: number
-    character: number
-  }
-}
-
 export type SymbolSource = {
   text: FilePartSourceText
   type: "symbol"
   path: string
-  range: Range
+  range: {
+    start: {
+      line: number
+      character: number
+    }
+    end: {
+      line: number
+      character: number
+    }
+  }
   name: string
   kind: number
 }
@@ -459,35 +467,6 @@ export type EventMessagePartRemoved = {
   }
 }
 
-export type PermissionRequest = {
-  id: string
-  sessionID: string
-  permission: string
-  patterns: Array<string>
-  metadata: {
-    [key: string]: unknown
-  }
-  always: Array<string>
-  tool?: {
-    messageID: string
-    callID: string
-  }
-}
-
-export type EventPermissionAsked = {
-  type: "permission.asked"
-  properties: PermissionRequest
-}
-
-export type EventPermissionReplied = {
-  type: "permission.replied"
-  properties: {
-    sessionID: string
-    requestID: string
-    reply: "once" | "always" | "reject"
-  }
-}
-
 export type SessionStatus =
   | {
       type: "idle"
@@ -531,92 +510,6 @@ export type EventFileEdited = {
   }
 }
 
-export type Todo = {
-  /**
-   * Brief description of the task
-   */
-  content: string
-  /**
-   * Current status of the task: pending, in_progress, completed, cancelled
-   */
-  status: string
-  /**
-   * Priority level of the task: high, medium, low
-   */
-  priority: string
-  /**
-   * Unique identifier for the todo item
-   */
-  id: string
-}
-
-export type EventTodoUpdated = {
-  type: "todo.updated"
-  properties: {
-    sessionID: string
-    todos: Array<Todo>
-  }
-}
-
-export type EventTuiPromptAppend = {
-  type: "tui.prompt.append"
-  properties: {
-    text: string
-  }
-}
-
-export type EventTuiCommandExecute = {
-  type: "tui.command.execute"
-  properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    /**
-     * Duration in milliseconds
-     */
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-}
-
-export type EventMcpToolsChanged = {
-  type: "mcp.tools.changed"
-  properties: {
-    server: string
-  }
-}
-
 export type EventCommandExecuted = {
   type: "command.executed"
   properties: {
@@ -646,7 +539,11 @@ export type Session = {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<FileDiff>
+    diffs?: Array<{
+      file: string
+      additions: number
+      deletions: number
+    }>
   }
   share?: {
     url: string
@@ -693,7 +590,11 @@ export type EventSessionDiff = {
   type: "session.diff"
   properties: {
     sessionID: string
-    diff: Array<FileDiff>
+    diff: Array<{
+      file: string
+      additions: number
+      deletions: number
+    }>
   }
 }
 
@@ -720,42 +621,30 @@ export type EventVcsBranchUpdated = {
   }
 }
 
-export type Pty = {
+export type Todo = {
+  /**
+   * Brief description of the task
+   */
+  content: string
+  /**
+   * Current status of the task: pending, in_progress, completed, cancelled
+   */
+  status: string
+  /**
+   * Priority level of the task: high, medium, low
+   */
+  priority: string
+  /**
+   * Unique identifier for the todo item
+   */
   id: string
-  title: string
-  command: string
-  args: Array<string>
-  cwd: string
-  status: "running" | "exited"
-  pid: number
 }
 
-export type EventPtyCreated = {
-  type: "pty.created"
+export type EventTodoUpdated = {
+  type: "todo.updated"
   properties: {
-    info: Pty
-  }
-}
-
-export type EventPtyUpdated = {
-  type: "pty.updated"
-  properties: {
-    info: Pty
-  }
-}
-
-export type EventPtyExited = {
-  type: "pty.exited"
-  properties: {
-    id: string
-    exitCode: number
-  }
-}
-
-export type EventPtyDeleted = {
-  type: "pty.deleted"
-  properties: {
-    id: string
+    sessionID: string
+    todos: Array<Todo>
   }
 }
 
@@ -774,28 +663,20 @@ export type EventGlobalDisposed = {
 }
 
 export type Event =
-  | EventInstallationUpdated
-  | EventInstallationUpdateAvailable
   | EventProjectUpdated
   | EventServerInstanceDisposed
-  | EventLspClientDiagnostics
-  | EventLspUpdated
+  | EventInstallationUpdated
+  | EventInstallationUpdateAvailable
+  | EventPermissionAsked
+  | EventPermissionReplied
   | EventMessageUpdated
   | EventMessageRemoved
   | EventMessagePartUpdated
   | EventMessagePartRemoved
-  | EventPermissionAsked
-  | EventPermissionReplied
   | EventSessionStatus
   | EventSessionIdle
   | EventSessionCompacted
   | EventFileEdited
-  | EventTodoUpdated
-  | EventTuiPromptAppend
-  | EventTuiCommandExecute
-  | EventTuiToastShow
-  | EventTuiSessionSelect
-  | EventMcpToolsChanged
   | EventCommandExecuted
   | EventSessionCreated
   | EventSessionUpdated
@@ -804,10 +685,7 @@ export type Event =
   | EventSessionError
   | EventFileWatcherUpdated
   | EventVcsBranchUpdated
-  | EventPtyCreated
-  | EventPtyUpdated
-  | EventPtyExited
-  | EventPtyDeleted
+  | EventTodoUpdated
   | EventServerConnected
   | EventGlobalDisposed
 
@@ -1631,6 +1509,27 @@ export type Config = {
      */
     url?: string
   }
+  /**
+   * Supabase storage configuration for cloud sync
+   */
+  supabase?: {
+    /**
+     * Supabase project URL
+     */
+    url: string
+    /**
+     * Supabase service role key
+     */
+    serviceKey: string
+    /**
+     * Storage bucket name
+     */
+    bucket?: string
+    /**
+     * Cloud project identifier for syncing files
+     */
+    projectId: string
+  }
   compaction?: {
     /**
      * Enable automatic compaction when context is full (default: true)
@@ -1684,6 +1583,31 @@ export type Config = {
      */
     mcp_timeout?: number
   }
+}
+
+export type CloudSyncStatus = {
+  configured: boolean
+  projectId: string | null
+  lastSync: string | null
+  changes: Array<{
+    path: string
+    status: "added" | "modified" | "deleted"
+    localSize?: number
+    remoteSize?: number
+  }>
+}
+
+export type CloudPushResult = {
+  success: boolean
+  uploaded: number
+  deleted: number
+  errors: Array<string>
+}
+
+export type CloudPullResult = {
+  success: boolean
+  fileCount: number
+  error?: string
 }
 
 export type ToolIds = Array<string>
@@ -1869,15 +1793,6 @@ export type ProviderAuthAuthorization = {
   instructions: string
 }
 
-export type Symbol = {
-  name: string
-  kind: number
-  location: {
-    uri: string
-    range: Range
-  }
-}
-
 export type FileNode = {
   name: string
   path: string
@@ -1934,50 +1849,6 @@ export type Agent = {
     [key: string]: unknown
   }
   steps?: number
-}
-
-export type McpStatusConnected = {
-  status: "connected"
-}
-
-export type McpStatusDisabled = {
-  status: "disabled"
-}
-
-export type McpStatusFailed = {
-  status: "failed"
-  error: string
-}
-
-export type McpStatusNeedsAuth = {
-  status: "needs_auth"
-}
-
-export type McpStatusNeedsClientRegistration = {
-  status: "needs_client_registration"
-  error: string
-}
-
-export type McpStatus =
-  | McpStatusConnected
-  | McpStatusDisabled
-  | McpStatusFailed
-  | McpStatusNeedsAuth
-  | McpStatusNeedsClientRegistration
-
-export type McpResource = {
-  name: string
-  uri: string
-  description?: string
-  mimeType?: string
-  client: string
-}
-
-export type LspStatus = {
-  id: string
-  name: string
-  root: string
-  status: "connected" | "error"
 }
 
 export type FormatterStatus = {
@@ -2133,181 +2004,6 @@ export type ProjectUpdateResponses = {
 
 export type ProjectUpdateResponse = ProjectUpdateResponses[keyof ProjectUpdateResponses]
 
-export type PtyListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/pty"
-}
-
-export type PtyListResponses = {
-  /**
-   * List of sessions
-   */
-  200: Array<Pty>
-}
-
-export type PtyListResponse = PtyListResponses[keyof PtyListResponses]
-
-export type PtyCreateData = {
-  body?: {
-    command?: string
-    args?: Array<string>
-    cwd?: string
-    title?: string
-    env?: {
-      [key: string]: string
-    }
-  }
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/pty"
-}
-
-export type PtyCreateErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type PtyCreateError = PtyCreateErrors[keyof PtyCreateErrors]
-
-export type PtyCreateResponses = {
-  /**
-   * Created session
-   */
-  200: Pty
-}
-
-export type PtyCreateResponse = PtyCreateResponses[keyof PtyCreateResponses]
-
-export type PtyRemoveData = {
-  body?: never
-  path: {
-    ptyID: string
-  }
-  query?: {
-    directory?: string
-  }
-  url: "/pty/{ptyID}"
-}
-
-export type PtyRemoveErrors = {
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type PtyRemoveError = PtyRemoveErrors[keyof PtyRemoveErrors]
-
-export type PtyRemoveResponses = {
-  /**
-   * Session removed
-   */
-  200: boolean
-}
-
-export type PtyRemoveResponse = PtyRemoveResponses[keyof PtyRemoveResponses]
-
-export type PtyGetData = {
-  body?: never
-  path: {
-    ptyID: string
-  }
-  query?: {
-    directory?: string
-  }
-  url: "/pty/{ptyID}"
-}
-
-export type PtyGetErrors = {
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type PtyGetError = PtyGetErrors[keyof PtyGetErrors]
-
-export type PtyGetResponses = {
-  /**
-   * Session info
-   */
-  200: Pty
-}
-
-export type PtyGetResponse = PtyGetResponses[keyof PtyGetResponses]
-
-export type PtyUpdateData = {
-  body?: {
-    title?: string
-    size?: {
-      rows: number
-      cols: number
-    }
-  }
-  path: {
-    ptyID: string
-  }
-  query?: {
-    directory?: string
-  }
-  url: "/pty/{ptyID}"
-}
-
-export type PtyUpdateErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type PtyUpdateError = PtyUpdateErrors[keyof PtyUpdateErrors]
-
-export type PtyUpdateResponses = {
-  /**
-   * Updated session
-   */
-  200: Pty
-}
-
-export type PtyUpdateResponse = PtyUpdateResponses[keyof PtyUpdateResponses]
-
-export type PtyConnectData = {
-  body?: never
-  path: {
-    ptyID: string
-  }
-  query?: {
-    directory?: string
-  }
-  url: "/pty/{ptyID}/connect"
-}
-
-export type PtyConnectErrors = {
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type PtyConnectError = PtyConnectErrors[keyof PtyConnectErrors]
-
-export type PtyConnectResponses = {
-  /**
-   * Connected session
-   */
-  200: boolean
-}
-
-export type PtyConnectResponse = PtyConnectResponses[keyof PtyConnectResponses]
-
 export type ConfigGetData = {
   body?: never
   path?: never
@@ -2352,6 +2048,87 @@ export type ConfigUpdateResponses = {
 }
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
+
+export type CloudStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/cloud/status"
+}
+
+export type CloudStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type CloudStatusError = CloudStatusErrors[keyof CloudStatusErrors]
+
+export type CloudStatusResponses = {
+  /**
+   * Cloud sync status
+   */
+  200: CloudSyncStatus
+}
+
+export type CloudStatusResponse = CloudStatusResponses[keyof CloudStatusResponses]
+
+export type CloudPushData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/cloud/push"
+}
+
+export type CloudPushErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type CloudPushError = CloudPushErrors[keyof CloudPushErrors]
+
+export type CloudPushResponses = {
+  /**
+   * Push result
+   */
+  200: CloudPushResult
+}
+
+export type CloudPushResponse = CloudPushResponses[keyof CloudPushResponses]
+
+export type CloudPullData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/cloud/pull"
+}
+
+export type CloudPullErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type CloudPullError = CloudPullErrors[keyof CloudPullErrors]
+
+export type CloudPullResponses = {
+  /**
+   * Pull result
+   */
+  200: CloudPullResult
+}
+
+export type CloudPullResponse = CloudPullResponses[keyof CloudPullResponses]
 
 export type ToolIdsData = {
   body?: never
@@ -2964,7 +2741,11 @@ export type SessionDiffResponses = {
   /**
    * List of diffs
    */
-  200: Array<FileDiff>
+  200: Array<{
+    file: string
+    additions: number
+    deletions: number
+  }>
 }
 
 export type SessionDiffResponse = SessionDiffResponses[keyof SessionDiffResponses]
@@ -3838,7 +3619,7 @@ export type FindSymbolsResponses = {
   /**
    * Symbols
    */
-  200: Array<Symbol>
+  200: Array<unknown>
 }
 
 export type FindSymbolsResponse = FindSymbolsResponses[keyof FindSymbolsResponses]
@@ -3977,7 +3758,10 @@ export type McpStatusResponses = {
    * MCP server status
    */
   200: {
-    [key: string]: McpStatus
+    [key: string]: {
+      status: "connected" | "disconnected" | "needs_auth" | "needs_client_registration" | "failed"
+      error?: string
+    }
   }
 }
 
@@ -4009,7 +3793,10 @@ export type McpAddResponses = {
    * MCP server added successfully
    */
   200: {
-    [key: string]: McpStatus
+    [key: string]: {
+      status: "connected" | "disconnected" | "needs_auth" | "needs_client_registration" | "failed"
+      error?: string
+    }
   }
 }
 
@@ -4117,7 +3904,10 @@ export type McpAuthCallbackResponses = {
   /**
    * OAuth authentication completed
    */
-  200: McpStatus
+  200: {
+    status: "connected" | "disconnected" | "needs_auth" | "needs_client_registration" | "failed"
+    error?: string
+  }
 }
 
 export type McpAuthCallbackResponse = McpAuthCallbackResponses[keyof McpAuthCallbackResponses]
@@ -4150,7 +3940,10 @@ export type McpAuthAuthenticateResponses = {
   /**
    * OAuth authentication completed
    */
-  200: McpStatus
+  200: {
+    status: "connected" | "disconnected" | "needs_auth" | "needs_client_registration" | "failed"
+    error?: string
+  }
 }
 
 export type McpAuthAuthenticateResponse = McpAuthAuthenticateResponses[keyof McpAuthAuthenticateResponses]
@@ -4209,7 +4002,13 @@ export type ExperimentalResourceListResponses = {
    * MCP resources
    */
   200: {
-    [key: string]: McpResource
+    [key: string]: {
+      name: string
+      uri: string
+      description?: string
+      mimeType?: string
+      client: string
+    }
   }
 }
 
@@ -4229,7 +4028,7 @@ export type LspStatusResponses = {
   /**
    * LSP server status
    */
-  200: Array<LspStatus>
+  200: Array<unknown>
 }
 
 export type LspStatusResponse = LspStatusResponses[keyof LspStatusResponses]
@@ -4251,300 +4050,6 @@ export type FormatterStatusResponses = {
 }
 
 export type FormatterStatusResponse = FormatterStatusResponses[keyof FormatterStatusResponses]
-
-export type TuiAppendPromptData = {
-  body?: {
-    text: string
-  }
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/append-prompt"
-}
-
-export type TuiAppendPromptErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type TuiAppendPromptError = TuiAppendPromptErrors[keyof TuiAppendPromptErrors]
-
-export type TuiAppendPromptResponses = {
-  /**
-   * Prompt processed successfully
-   */
-  200: boolean
-}
-
-export type TuiAppendPromptResponse = TuiAppendPromptResponses[keyof TuiAppendPromptResponses]
-
-export type TuiOpenHelpData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/open-help"
-}
-
-export type TuiOpenHelpResponses = {
-  /**
-   * Help dialog opened successfully
-   */
-  200: boolean
-}
-
-export type TuiOpenHelpResponse = TuiOpenHelpResponses[keyof TuiOpenHelpResponses]
-
-export type TuiOpenSessionsData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/open-sessions"
-}
-
-export type TuiOpenSessionsResponses = {
-  /**
-   * Session dialog opened successfully
-   */
-  200: boolean
-}
-
-export type TuiOpenSessionsResponse = TuiOpenSessionsResponses[keyof TuiOpenSessionsResponses]
-
-export type TuiOpenThemesData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/open-themes"
-}
-
-export type TuiOpenThemesResponses = {
-  /**
-   * Theme dialog opened successfully
-   */
-  200: boolean
-}
-
-export type TuiOpenThemesResponse = TuiOpenThemesResponses[keyof TuiOpenThemesResponses]
-
-export type TuiOpenModelsData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/open-models"
-}
-
-export type TuiOpenModelsResponses = {
-  /**
-   * Model dialog opened successfully
-   */
-  200: boolean
-}
-
-export type TuiOpenModelsResponse = TuiOpenModelsResponses[keyof TuiOpenModelsResponses]
-
-export type TuiSubmitPromptData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/submit-prompt"
-}
-
-export type TuiSubmitPromptResponses = {
-  /**
-   * Prompt submitted successfully
-   */
-  200: boolean
-}
-
-export type TuiSubmitPromptResponse = TuiSubmitPromptResponses[keyof TuiSubmitPromptResponses]
-
-export type TuiClearPromptData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/clear-prompt"
-}
-
-export type TuiClearPromptResponses = {
-  /**
-   * Prompt cleared successfully
-   */
-  200: boolean
-}
-
-export type TuiClearPromptResponse = TuiClearPromptResponses[keyof TuiClearPromptResponses]
-
-export type TuiExecuteCommandData = {
-  body?: {
-    command: string
-  }
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/execute-command"
-}
-
-export type TuiExecuteCommandErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type TuiExecuteCommandError = TuiExecuteCommandErrors[keyof TuiExecuteCommandErrors]
-
-export type TuiExecuteCommandResponses = {
-  /**
-   * Command executed successfully
-   */
-  200: boolean
-}
-
-export type TuiExecuteCommandResponse = TuiExecuteCommandResponses[keyof TuiExecuteCommandResponses]
-
-export type TuiShowToastData = {
-  body?: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    /**
-     * Duration in milliseconds
-     */
-    duration?: number
-  }
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/show-toast"
-}
-
-export type TuiShowToastResponses = {
-  /**
-   * Toast notification shown successfully
-   */
-  200: boolean
-}
-
-export type TuiShowToastResponse = TuiShowToastResponses[keyof TuiShowToastResponses]
-
-export type TuiPublishData = {
-  body?: EventTuiPromptAppend | EventTuiCommandExecute | EventTuiToastShow | EventTuiSessionSelect
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/publish"
-}
-
-export type TuiPublishErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type TuiPublishError = TuiPublishErrors[keyof TuiPublishErrors]
-
-export type TuiPublishResponses = {
-  /**
-   * Event published successfully
-   */
-  200: boolean
-}
-
-export type TuiPublishResponse = TuiPublishResponses[keyof TuiPublishResponses]
-
-export type TuiSelectSessionData = {
-  body?: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/select-session"
-}
-
-export type TuiSelectSessionErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type TuiSelectSessionError = TuiSelectSessionErrors[keyof TuiSelectSessionErrors]
-
-export type TuiSelectSessionResponses = {
-  /**
-   * Session selected successfully
-   */
-  200: boolean
-}
-
-export type TuiSelectSessionResponse = TuiSelectSessionResponses[keyof TuiSelectSessionResponses]
-
-export type TuiControlNextData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/control/next"
-}
-
-export type TuiControlNextResponses = {
-  /**
-   * Next TUI request
-   */
-  200: {
-    path: string
-    body: unknown
-  }
-}
-
-export type TuiControlNextResponse = TuiControlNextResponses[keyof TuiControlNextResponses]
-
-export type TuiControlResponseData = {
-  body?: unknown
-  path?: never
-  query?: {
-    directory?: string
-  }
-  url: "/tui/control/response"
-}
-
-export type TuiControlResponseResponses = {
-  /**
-   * Response submitted successfully
-   */
-  200: boolean
-}
-
-export type TuiControlResponseResponse = TuiControlResponseResponses[keyof TuiControlResponseResponses]
 
 export type AuthSetData = {
   body?: Auth

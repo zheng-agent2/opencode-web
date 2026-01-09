@@ -19,6 +19,7 @@
 OpenCode uses a sophisticated agent-tool architecture to read and write code safely and intelligently. This document provides a comprehensive technical analysis of how agents interact with code through tools, manage permissions, track changes, and maintain safety guarantees.
 
 **Key Concepts:**
+
 - **Agents**: AI assistants with different capabilities and permissions (build, plan, explore, general)
 - **Tools**: Executable functions that agents can call (Read, Write, Edit, Bash, etc.)
 - **Sessions**: Conversation contexts that manage message flow and tool execution
@@ -42,9 +43,7 @@ The Task tool enables agents to spawn **subagents** - specialized child agents t
 ```typescript
 const agents = AgentRegistry.agents()
   .filter((agent) => agent.mode !== "primary")
-  .filter((agent) =>
-    PermissionNext.evaluate(caller.permission, "task", [agent.id]).type === "allow"
-  )
+  .filter((agent) => PermissionNext.evaluate(caller.permission, "task", [agent.id]).type === "allow")
 ```
 
 - Lists all available agents from the registry
@@ -67,6 +66,7 @@ const child = await Session.create({
 ```
 
 **Key aspects:**
+
 - `parentID`: Links child to parent session for hierarchy
 - **Restricted permissions**: Child sessions have additional restrictions:
   - `TodoWrite/TodoRead`: `deny` (prevents subagent todo manipulation)
@@ -87,6 +87,7 @@ const result = await SessionPrompt.prompt({
 ```
 
 **Execution flow:**
+
 - Uses `SessionPrompt.prompt()` to run the task in child session
 - Passes agent type (explore, general, etc.) and task description
 - Disables todo/task tools explicitly
@@ -107,13 +108,14 @@ part.subscribe(MessageV2.Event.PartUpdated, (event) => {
     ctx.metadata({
       tools: Object.entries(tools)
         .map(([name, count]) => `${name} (${count})`)
-        .join(", ")
+        .join(", "),
     })
   }
 })
 ```
 
 **Tracking:**
+
 - Subscribes to child session's tool execution events
 - Counts how many times each tool is called
 - Updates parent UI with real-time progress
@@ -126,13 +128,14 @@ return {
   title: `Task: ${input.description}`,
   output: response.text,
   metadata: {
-    session_id: child.id,  // For resume capability
+    session_id: child.id, // For resume capability
     tools: toolsSummary,
-  }
+  },
 }
 ```
 
 **Return value includes:**
+
 - Subagent's final text response
 - Session ID (enables resuming with `resume` parameter)
 - Summary of all tools executed
@@ -141,11 +144,13 @@ return {
 ### Subagent Types
 
 **explore** (`packages/opencode/src/agent/explore.ts`):
+
 - Fast, read-only agent for codebase exploration
 - Tools: `Glob`, `Grep`, `Read`, `Bash` only
 - Use case: Finding files, searching code, understanding structure
 
 **general** (`packages/opencode/src/agent/general.ts`):
+
 - General-purpose agent for research and multistep tasks
 - Tools: All tools (Read, Write, Edit, Bash, WebFetch, etc.)
 - Use case: Complex searches, data gathering, code analysis
@@ -163,16 +168,19 @@ OpenCode defines two categories of agents:
 #### Primary Agents (mode: "primary")
 
 **build** - Full-access development agent:
+
 - Default agent for interactive coding sessions
 - Access to all tools with minimal restrictions
 - Handles implementation, debugging, refactoring
 
 **plan** - Read-only planning agent:
+
 - Can only edit `.opencode/plan/*.md` files
 - All other writes denied
 - Used for planning implementations before execution
 
 **title/summary/compaction** - Hidden utility agents:
+
 - `title`: Generates conversation titles
 - `summary`: Creates message summaries
 - `compaction`: Compacts context when token limit approached
@@ -180,11 +188,13 @@ OpenCode defines two categories of agents:
 #### Subagents (mode: "subagent")
 
 **general**:
+
 - Invoked via Task tool with `@general`
 - Full tool access for complex multistep tasks
 - Research, code search, data analysis
 
 **explore**:
+
 - Fast read-only exploration
 - Limited to: Glob, Grep, Read, Bash
 - Codebase navigation and understanding
@@ -213,10 +223,10 @@ Agents use hierarchical permission rules:
 
 ```typescript
 PermissionNext.merge(
-  defaults,           // Global defaults
-  agentPermissions,   // Agent-specific rules
-  userConfig,         // User's settings
-  sessionPermissions  // Session overrides
+  defaults, // Global defaults
+  agentPermissions, // Agent-specific rules
+  userConfig, // User's settings
+  sessionPermissions, // Session overrides
 )
 ```
 
@@ -227,8 +237,8 @@ permission: PermissionNext.merge(
   defaults,
   PermissionNext.fromConfig({
     edit: {
-      "*": "deny",                      // Deny all edits
-      ".opencode/plan/*.md": "allow",   // Except plan files
+      "*": "deny", // Deny all edits
+      ".opencode/plan/*.md": "allow", // Except plan files
     },
   }),
   user,
@@ -236,11 +246,13 @@ permission: PermissionNext.merge(
 ```
 
 **Permission types:**
+
 - `allow`: Tool call proceeds immediately
 - `deny`: Throws error, blocks execution
 - `ask`: Pauses and shows permission UI to user
 
 **Pattern matching:**
+
 - Exact matches: `"src/config.ts"`
 - Wildcards: `"*.env"`, `"src/**/*.test.ts"`
 - Negation: `"!node_modules/**"`
@@ -251,11 +263,12 @@ Agents can specify maximum agentic loop iterations:
 
 ```typescript
 {
-  steps: 5  // Max 5 iterations of LLM → tools → LLM
+  steps: 5 // Max 5 iterations of LLM → tools → LLM
 }
 ```
 
 **Behavior:**
+
 - On last step, system adds: "IMPORTANT: This is your FINAL step."
 - Forces agent to complete or return partial result
 - Prevents infinite loops in constrained agents
@@ -291,6 +304,7 @@ await ctx.ask({
 ```
 
 **Security checks:**
+
 - Verifies file is within workspace boundaries
 - Requests `external_directory` permission for outside files
 - Requests `read` permission for the specific file path
@@ -301,16 +315,29 @@ await ctx.ask({
 **Two-stage detection:**
 
 **Stage 1: Extension-based filtering**
+
 ```typescript
 const binaryExtensions = [
-  ".png", ".jpg", ".jpeg", ".gif", ".pdf",
-  ".zip", ".tar", ".gz", ".exe", ".dll",
-  ".so", ".dylib", ".class", ".pyc",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".pdf",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".class",
+  ".pyc",
   // ... 50+ extensions
 ]
 ```
 
 **Stage 2: Content analysis**
+
 ```typescript
 const isBinary = (buffer: Buffer) => {
   // Check for null bytes
@@ -330,6 +357,7 @@ const isBinary = (buffer: Buffer) => {
 ```
 
 **If binary detected:**
+
 ```
 Error: Cannot read binary file: /path/to/file.bin
 ```
@@ -340,18 +368,19 @@ Error: Cannot read binary file: /path/to/file.bin
 
 ```typescript
 if (mimeType?.startsWith("image/")) {
-  const base64 = await file.arrayBuffer()
-    .then(buf => Buffer.from(buf).toString("base64"))
+  const base64 = await file.arrayBuffer().then((buf) => Buffer.from(buf).toString("base64"))
 
   return {
     title: `Read: ${displayPath}`,
     output: `Image file: ${input.file_path}`,
-    attachments: [{
-      type: "file",
-      name: path.basename(input.file_path),
-      contentType: mimeType,
-      data: base64,
-    }]
+    attachments: [
+      {
+        type: "file",
+        name: path.basename(input.file_path),
+        contentType: mimeType,
+        data: base64,
+      },
+    ],
   }
 }
 ```
@@ -362,11 +391,13 @@ if (mimeType?.startsWith("image/")) {
 - Agent can "see" the image visually
 
 **PDFs** (similar flow):
+
 - Extracts text content and visual elements
 - Returns page-by-page representation
 - Includes both text and images
 
 **Jupyter Notebooks** (.ipynb):
+
 - Parses JSON structure
 - Returns cells with outputs
 - Combines code, text, and visualizations
@@ -382,15 +413,14 @@ const formatted = lines
   .slice(start, end)
   .map((line, i) => {
     const lineNum = String(start + i + 1).padStart(5, "0")
-    const truncated = line.length > 2000
-      ? line.slice(0, 2000) + "..."
-      : line
+    const truncated = line.length > 2000 ? line.slice(0, 2000) + "..." : line
     return `${lineNum}\t${truncated}`
   })
   .join("\n")
 ```
 
 **Features:**
+
 - Default limit: 2000 lines
 - Supports offset/limit for pagination
 - Line numbers in `cat -n` format: `00001\tcontent`
@@ -398,6 +428,7 @@ const formatted = lines
 - Preserves exact whitespace and indentation
 
 **Output example:**
+
 ```
 00001	import { Session } from "./session"
 00002	import { Agent } from "./agent"
@@ -410,11 +441,12 @@ const formatted = lines
 #### 5. File Tracking for Write Safety (lines 123-124)
 
 ```typescript
-await LSP.touchFile(input.file_path)  // Warm up LSP
-await FileTime.read(input.file_path)  // Record read timestamp
+await LSP.touchFile(input.file_path) // Warm up LSP
+await FileTime.read(input.file_path) // Record read timestamp
 ```
 
 **Critical for safety:**
+
 - `LSP.touchFile()`: Notifies language server about file access
 - `FileTime.read()`: Records timestamp of read operation
 - Later used by Write/Edit to detect concurrent modifications
@@ -423,16 +455,19 @@ await FileTime.read(input.file_path)  // Record read timestamp
 #### 6. Error Handling
 
 **File not found:**
+
 ```
 Error: File not found: /path/to/file.ts
 ```
 
 **Permission denied:**
+
 ```
 Error: Permission denied for reading: /path/to/file.ts
 ```
 
 **Binary file:**
+
 ```
 Error: Cannot read binary file: /path/to/file.bin
 Use a specialized tool for binary files.
@@ -461,6 +496,7 @@ return await FileTime.withLock(input.file_path, async () => {
 ```
 
 **Purpose:**
+
 - Serializes concurrent writes to the same file
 - Prevents race conditions from multiple tool calls
 - Uses file path as lock key
@@ -473,12 +509,14 @@ await FileTime.assert(input.file_path)
 ```
 
 **Safety check:**
+
 - Verifies file was read in current session
 - Compares file's current mtime vs recorded read time
 - Throws error if file modified since last read
 - Forces agent to re-read before editing
 
 **Error if violated:**
+
 ```
 File has been modified since it was last read.
 Last modification: 2025-01-07T20:15:30.000Z
@@ -493,15 +531,15 @@ The Edit tool tries **9 different replacement strategies** in order:
 
 ```typescript
 const replacers = [
-  new SimpleReplacer(),                    // 1. Exact match
-  new LineTrimmedReplacer(),              // 2. Trim each line
-  new BlockAnchorReplacer(),              // 3. First/last line + similarity
-  new WhitespaceNormalizedReplacer(),     // 4. Normalize all whitespace
-  new IndentationFlexibleReplacer(),      // 5. Ignore indentation
-  new EscapeNormalizedReplacer(),         // 6. Handle escape sequences
-  new TrimmedBoundaryReplacer(),          // 7. Trim start/end
-  new ContextAwareReplacer(),             // 8. Use surrounding context
-  new MultiOccurrenceReplacer(),          // 9. Find all exact matches
+  new SimpleReplacer(), // 1. Exact match
+  new LineTrimmedReplacer(), // 2. Trim each line
+  new BlockAnchorReplacer(), // 3. First/last line + similarity
+  new WhitespaceNormalizedReplacer(), // 4. Normalize all whitespace
+  new IndentationFlexibleReplacer(), // 5. Ignore indentation
+  new EscapeNormalizedReplacer(), // 6. Handle escape sequences
+  new TrimmedBoundaryReplacer(), // 7. Trim start/end
+  new ContextAwareReplacer(), // 8. Use surrounding context
+  new MultiOccurrenceReplacer(), // 9. Find all exact matches
 ]
 
 for (const replacer of replacers) {
@@ -515,36 +553,43 @@ for (const replacer of replacers) {
 **Strategy details:**
 
 **SimpleReplacer:**
+
 - Exact string match: `content.includes(oldString)`
 - Fastest, most reliable
 - Fails if any character differs
 
 **LineTrimmedReplacer:**
+
 - Trims whitespace from each line
 - Handles copy-paste whitespace differences
 - Preserves indentation structure
 
 **BlockAnchorReplacer:**
+
 - Uses first and last line as anchors
 - Finds block with similar content in middle
 - Handles minor variations in middle lines
 
 **WhitespaceNormalizedReplacer:**
+
 - Collapses all whitespace to single spaces
 - Handles formatting differences
 - Most permissive whitespace handling
 
 **IndentationFlexibleReplacer:**
+
 - Detects indentation differences
 - Adjusts oldString to match file's indentation
 - Handles tab vs space differences
 
 **MultiOccurrenceReplacer:**
+
 - Finds all exact matches
 - Asks user which occurrence to replace
 - Prevents ambiguous replacements
 
 **If all fail:**
+
 ```
 Error: Could not find the specified string in the file.
 
@@ -565,7 +610,7 @@ const diff = createTwoFilesPatch(
   content,
   newContent,
   "", // old file header
-  ""  // new file header
+  "", // new file header
 )
 
 await ctx.ask({
@@ -576,11 +621,12 @@ await ctx.ask({
     diff: trimDiff(diff),
     additions,
     deletions,
-  }
+  },
 })
 ```
 
 **Permission UI shows:**
+
 - Unified diff with colors (+ green, - red)
 - Number of additions/deletions
 - File path being modified
@@ -593,18 +639,20 @@ await LSP.touchFile(input.file_path)
 
 const diagnostics = await LSP.diagnostics({
   includeFile: input.file_path,
-  limit: 20,        // Max 20 errors in edited file
-  otherLimit: 5,    // Max 5 other files with errors
+  limit: 20, // Max 20 errors in edited file
+  otherLimit: 5, // Max 5 other files with errors
 })
 ```
 
 **After editing:**
+
 - Notifies LSP server of file change
 - Fetches type errors, linting errors, warnings
 - Returns diagnostics to agent
 - Agent can see errors and fix them immediately
 
 **Diagnostic output example:**
+
 ```
 The file was edited successfully.
 
@@ -626,6 +674,7 @@ ctx.metadata({
 ```
 
 **Change tracking:**
+
 - Records new file modification time
 - Publishes `File.Event.Edited` event
 - Snapshot system captures change for undo/revert
@@ -642,11 +691,13 @@ The Write tool **overwrites entire files** with new content. Simpler than Edit b
 #### Key Differences from Edit
 
 **No fuzzy matching:**
+
 - Replaces entire file content
 - No need for string search/replace
 - More straightforward for new files or complete rewrites
 
 **Same safety guarantees:**
+
 - Read-before-write assertion
 - Permission requests with diff
 - LSP diagnostics
@@ -663,20 +714,14 @@ if (exists) {
 
 // 2. Generate diff for permission request
 const oldContent = exists ? await file.text() : ""
-const diff = createTwoFilesPatch(
-  input.file_path,
-  input.file_path,
-  oldContent,
-  input.content,
-  "", ""
-)
+const diff = createTwoFilesPatch(input.file_path, input.file_path, oldContent, input.content, "", "")
 
 // 3. Request permission (uses "edit" permission like Edit tool)
 await ctx.ask({
   permission: "edit",
   patterns: [input.file_path],
   always: [input.file_path],
-  metadata: { diff: trimDiff(diff) }
+  metadata: { diff: trimDiff(diff) },
 })
 
 // 4. Write file
@@ -706,12 +751,14 @@ return {
 #### When to Use Write vs Edit
 
 **Use Edit when:**
+
 - Making targeted changes to specific sections
 - Changing a few lines in a large file
 - Agent read the file and knows exact location
 - Want to preserve surrounding code exactly
 
 **Use Write when:**
+
 - Creating new files
 - Complete file rewrites
 - Generated content (e.g., config files)
@@ -769,11 +816,13 @@ interface Tool.Context {
 **Context methods:**
 
 **`ctx.metadata(data)`:**
+
 - Updates tool UI in real-time
 - Shows progress, status, intermediate results
 - Example: Task tool showing subagent progress
 
 **`ctx.ask(request)`:**
+
 - Requests user permission
 - Pauses execution until user responds
 - Throws `DeniedError` if denied
@@ -782,10 +831,10 @@ interface Tool.Context {
 
 ```typescript
 interface PermissionRequest {
-  permission: string              // Permission key (e.g., "edit", "bash")
-  patterns: string[]              // What's being accessed
-  always?: string[]               // Patterns to save if "always" chosen
-  metadata?: Record<string, any>  // Additional context for UI
+  permission: string // Permission key (e.g., "edit", "bash")
+  patterns: string[] // What's being accessed
+  always?: string[] // Patterns to save if "always" chosen
+  metadata?: Record<string, any> // Additional context for UI
 }
 ```
 
@@ -800,11 +849,12 @@ await ctx.ask({
     diff: "- const x = 1\n+ const x = 2",
     additions: 1,
     deletions: 1,
-  }
+  },
 })
 ```
 
 **UI displays:**
+
 - Permission type: "Edit file"
 - File path: "src/auth.ts"
 - Diff preview with syntax highlighting
@@ -824,6 +874,7 @@ interface Tool.Result<M = unknown> {
 **Examples:**
 
 **Read tool:**
+
 ```typescript
 {
   title: "Read: src/auth.ts",
@@ -836,6 +887,7 @@ interface Tool.Result<M = unknown> {
 ```
 
 **Edit tool:**
+
 ```typescript
 {
   title: "Edit: src/auth.ts",
@@ -849,6 +901,7 @@ interface Tool.Result<M = unknown> {
 ```
 
 **Task tool:**
+
 ```typescript
 {
   title: "Task: Search for auth implementation",
@@ -881,11 +934,12 @@ export const ToolRegistry = {
       TodoWriteTool,
       // ... more tools
     ]
-  }
+  },
 }
 ```
 
 **Registration process:**
+
 1. Tool implements `Tool.Info<Parameters, Metadata>`
 2. Export from tool module
 3. Import in registry
@@ -900,11 +954,7 @@ async function resolveTools(session: Session, agent: Agent) {
   // 1. Get all registered tools
   for (const tool of ToolRegistry.tools()) {
     // 2. Check agent permissions
-    const perm = PermissionNext.evaluate(
-      agent.permission,
-      tool.id,
-      []
-    )
+    const perm = PermissionNext.evaluate(agent.permission, tool.id, [])
 
     if (perm.type === "deny") continue
 
@@ -991,14 +1041,13 @@ async function loop(options: {
   disableTodo?: boolean
   disableTask?: boolean
 }): Promise<LoopResult> {
-
   while (true) {
     // 1. Fetch conversation history
     const messages = await MessageV2.list(session.id)
 
     // 2. Find last user and assistant messages
-    const lastUser = findLast(messages, m => m.role === "user")
-    const lastAssistant = findLast(messages, m => m.role === "assistant")
+    const lastUser = findLast(messages, (m) => m.role === "user")
+    const lastAssistant = findLast(messages, (m) => m.role === "assistant")
 
     // 3. Check for pending tasks
     if (needsCompaction(messages)) {
@@ -1044,11 +1093,11 @@ async function loop(options: {
     const finish = processor.finishReason()
 
     if (finish === "stop" || finish === "length") {
-      break  // Done
+      break // Done
     }
 
     if (finish === "tool-calls") {
-      continue  // Execute tools and loop again
+      continue // Execute tools and loop again
     }
 
     if (finish === "permission-denied") {
@@ -1059,7 +1108,7 @@ async function loop(options: {
     // 8. Check step limit
     if (agent.steps && currentStep >= agent.steps) {
       await injectFinalStepWarning()
-      continue  // Force final attempt
+      continue // Force final attempt
     }
   }
 
@@ -1074,21 +1123,25 @@ async function loop(options: {
 **Key aspects:**
 
 **Pending task detection:**
+
 - Compaction: Token limit exceeded, need to summarize
 - Subtasks: Previous message has subtask that needs execution
 
 **Tool resolution:**
+
 - Filters tools by agent permissions
 - Wraps each tool's execute with permission/plugin hooks
 - Includes MCP tools from connected servers
 
 **Finish reasons:**
+
 - `stop`: Normal completion, agent finished
 - `length`: Hit max tokens, need compaction
 - `tool-calls`: Agent wants to call tools, continue loop
 - `permission-denied`: User denied permission
 
 **Step limiting:**
+
 - Tracks iterations through loop
 - On last step, injects "FINAL step" warning
 - Forces agent to complete or fail
@@ -1134,6 +1187,7 @@ class SessionProcessor {
 **Event handling:**
 
 **text-delta** (lines 60-75):
+
 ```typescript
 async handleTextDelta(event: TextDelta) {
   this.textBuffer += event.delta
@@ -1160,6 +1214,7 @@ async handleTextDelta(event: TextDelta) {
 ```
 
 **tool-call** (lines 143-210):
+
 ```typescript
 async handleToolCall(event: ToolCall) {
   // 1. Doom loop detection
@@ -1196,6 +1251,7 @@ async handleToolCall(event: ToolCall) {
 ```
 
 **tool-result** (lines 212-275):
+
 ```typescript
 async handleToolResult(event: ToolResult) {
   const { part, tool } = this.executingTools.get(event.id)
@@ -1237,6 +1293,7 @@ async handleToolResult(event: ToolResult) {
 ```
 
 **finish-step** (lines 320-365):
+
 ```typescript
 async handleFinishStep(event: FinishStep) {
   // 1. Compute token usage
@@ -1292,6 +1349,7 @@ function detectDoomLoop() {
 ```
 
 If detected:
+
 - Pauses execution
 - Shows user: "Agent is calling the same tool repeatedly"
 - User can allow continuation or stop
@@ -1309,17 +1367,13 @@ async function resolveTools(
   options: {
     disableTodo?: boolean
     disableTask?: boolean
-  }
+  },
 ) {
   const resolved = []
 
   for (const toolInfo of ToolRegistry.tools()) {
     // 1. Check agent permission
-    const perm = PermissionNext.evaluate(
-      agent.permission,
-      toolInfo.id,
-      []
-    )
+    const perm = PermissionNext.evaluate(agent.permission, toolInfo.id, [])
 
     if (perm.type === "deny") continue
 
@@ -1401,10 +1455,7 @@ class FileTime {
   static async assert(path: string) {
     const lastRead = this.reads.get(path)
     if (!lastRead) {
-      throw new Error(
-        "File has not been read in this session. " +
-        "Please read the file before modifying it."
-      )
+      throw new Error("File has not been read in this session. " + "Please read the file before modifying it.")
     }
 
     const stat = await Bun.file(path).stat()
@@ -1413,9 +1464,9 @@ class FileTime {
     if (currentMtime > lastRead) {
       throw new Error(
         `File has been modified since it was last read.\n` +
-        `Last modification: ${currentMtime.toISOString()}\n` +
-        `Last read: ${lastRead.toISOString()}\n\n` +
-        `Please read the file again before modifying it.`
+          `Last modification: ${currentMtime.toISOString()}\n` +
+          `Last read: ${lastRead.toISOString()}\n\n` +
+          `Please read the file again before modifying it.`,
       )
     }
   }
@@ -1425,10 +1476,7 @@ class FileTime {
     this.reads.set(path, new Date(stat.mtime))
   }
 
-  static async withLock<T>(
-    path: string,
-    fn: () => Promise<T>
-  ): Promise<T> {
+  static async withLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
     // Wait for any existing lock
     while (this.locks.has(path)) {
       await this.locks.get(path)
@@ -1436,7 +1484,7 @@ class FileTime {
 
     // Create new lock
     let release: () => void
-    const lock = new Promise<void>(resolve => {
+    const lock = new Promise<void>((resolve) => {
       release = resolve
     })
     this.locks.set(path, lock)
@@ -1454,12 +1502,14 @@ class FileTime {
 #### Flow
 
 **On Read:**
+
 ```typescript
 await FileTime.read("src/auth.ts")
 // Records: src/auth.ts -> 2025-01-07T20:00:00.000Z
 ```
 
 **On Edit/Write:**
+
 ```typescript
 await FileTime.assert("src/auth.ts")
 // Checks: File's current mtime <= recorded read time
@@ -1468,6 +1518,7 @@ await FileTime.assert("src/auth.ts")
 ```
 
 **After Edit/Write:**
+
 ```typescript
 await FileTime.update("src/auth.ts")
 // Updates: src/auth.ts -> 2025-01-07T20:05:00.000Z
@@ -1530,7 +1581,7 @@ class Snapshot {
     const files = diff
       .split("\n")
       .filter(Boolean)
-      .map(line => {
+      .map((line) => {
         const [status, path] = line.split("\t")
         return { status, path }
       })
@@ -1568,12 +1619,14 @@ class Snapshot {
 #### Flow
 
 **Before each step:**
+
 ```typescript
 const tree = await Snapshot.track(session.id, message.id)
 // Creates git tree object: "a3f8d92..."
 ```
 
 **After step completes:**
+
 ```typescript
 const changes = await Snapshot.patch(tree)
 // Returns: [
@@ -1590,6 +1643,7 @@ await MessagePart.create({
 ```
 
 **User reverts:**
+
 ```typescript
 await Snapshot.revert(toolPartID)
 // Restores working directory to before that tool executed
@@ -1632,7 +1686,7 @@ async function compact(session: Session) {
   })
 
   // 4. Replace old messages with summary
-  await MessageV2.deleteMany(toCompact.map(m => m.id))
+  await MessageV2.deleteMany(toCompact.map((m) => m.id))
   await MessageV2.create({
     sessionID: session.id,
     role: "assistant",
@@ -1642,7 +1696,7 @@ async function compact(session: Session) {
       compactedMessages: toCompact.length,
       originalTokens: estimateTokens(toCompact),
       summaryTokens: estimateTokens(summary.text),
-    }
+    },
   })
 
   // 5. Continue conversation
@@ -1676,11 +1730,13 @@ Be concise but comprehensive. Format as:
 #### Trigger Conditions
 
 **Proactive compaction:**
+
 - Triggered when estimated tokens > 80% of context limit
 - Runs between agentic loop iterations
 - Transparent to user
 
 **Forced compaction:**
+
 - Finish reason = "length" (hit token limit)
 - Immediately compact before next iteration
 
@@ -1726,11 +1782,11 @@ while (true) {
     await MessageV2.create({
       sessionID: session.id,
       role: "system",
-      text: "IMPORTANT: This is your FINAL step. You must complete the task now or return your best attempt."
+      text: "IMPORTANT: This is your FINAL step. You must complete the task now or return your best attempt.",
     })
 
     // Give agent one more chance
-    currentStep = 0  // Reset for final attempt
+    currentStep = 0 // Reset for final attempt
     finalAttempt = true
     continue
   }
@@ -1745,15 +1801,18 @@ while (true) {
 #### Use Cases
 
 **explore agent (steps: 5)**:
+
 - Fast, focused exploration
 - Prevents over-exploration
 - Forces concise results
 
 **general agent (steps: 10)**:
+
 - More complex tasks allowed
 - Still bounded to prevent runaway
 
 **build agent (no limit)**:
+
 - Primary agent for implementation
 - Can iterate as needed
 
@@ -1830,7 +1889,7 @@ await FileTime.read(file_path)
 // d. Format with line numbers
 const formatted = content
   .split("\n")
-  .map((line, i) => `${String(i+1).padStart(5, "0")}\t${line}`)
+  .map((line, i) => `${String(i + 1).padStart(5, "0")}\t${line}`)
   .join("\n")
 
 // e. Return to LLM
@@ -1867,7 +1926,6 @@ return {
 ```typescript
 // a. Acquire file lock
 await FileTime.withLock(file_path, async () => {
-
   // b. Assert file unchanged since read
   await FileTime.assert(file_path)
   // Checks: current mtime (20:00:00) <= read time (20:00:00) ✓
@@ -1876,19 +1934,10 @@ await FileTime.withLock(file_path, async () => {
   const content = await Bun.file(file_path).text()
 
   // d. Find and replace with fuzzy matching
-  const newContent = SimpleReplacer.replace(
-    content,
-    old_string,
-    new_string
-  )
+  const newContent = SimpleReplacer.replace(content, old_string, new_string)
 
   // e. Generate diff
-  const diff = createTwoFilesPatch(
-    file_path,
-    file_path,
-    content,
-    newContent
-  )
+  const diff = createTwoFilesPatch(file_path, file_path, content, newContent)
 
   // f. Request permission
   await ctx.ask({
@@ -1899,7 +1948,7 @@ await FileTime.withLock(file_path, async () => {
       diff: trimDiff(diff),
       additions: 1,
       deletions: 1,
-    }
+    },
   })
   // -> User sees diff in UI, clicks "Allow"
 
@@ -1923,7 +1972,7 @@ await FileTime.withLock(file_path, async () => {
   return {
     title: "Edit: src/auth.ts",
     output: formatDiagnostics(diagnostics),
-    metadata: { diff, additions: 1, deletions: 1 }
+    metadata: { diff, additions: 1, deletions: 1 },
   }
 })
 ```
@@ -1945,10 +1994,8 @@ const patch = await exec(`git diff-tree --name-status ${prevTree} ${tree}`)
 await MessagePart.create({
   messageID: assistantMessage.id,
   type: "patch",
-  files: [
-    { status: "M", path: "src/auth.ts" }
-  ],
-  metadata: { tree }
+  files: [{ status: "M", path: "src/auth.ts" }],
+  metadata: { tree },
 })
 ```
 
@@ -1982,7 +2029,7 @@ await MessagePart.create({
 return {
   message: assistantMessage,
   text: "Fixed! Changed line 45 to use secure password comparison.",
-  cost: 0.0234,  // Calculated from token usage
+  cost: 0.0234, // Calculated from token usage
 }
 ```
 

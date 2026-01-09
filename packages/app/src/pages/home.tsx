@@ -38,13 +38,65 @@ export default function Home() {
       }
     }
 
+    // #region agent log
+    const debugData1 = {
+      serverUrl: server.url,
+      isLocal: server.isLocal(),
+      hasOpenDirPicker: !!platform.openDirectoryPickerDialog,
+      homePath: sync.data.path.home,
+    }
+    console.log("[DEBUG] chooseProject called", debugData1)
+    fetch("http://127.0.0.1:7246/ingest/3f780156-45fe-4e83-a393-57f8a6744add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "home.tsx:chooseProject",
+        message: "chooseProject called",
+        data: debugData1,
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        hypothesisId: "A,B",
+      }),
+    }).catch(() => {})
+    // #endregion
+
     if (platform.openDirectoryPickerDialog && server.isLocal()) {
+      // #region agent log
+      console.log("[DEBUG] Using native file picker (local)")
+      fetch("http://127.0.0.1:7246/ingest/3f780156-45fe-4e83-a393-57f8a6744add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: "home.tsx:chooseProject",
+          message: "Using native file picker (local)",
+          data: {},
+          timestamp: Date.now(),
+          sessionId: "debug-session",
+          hypothesisId: "A",
+        }),
+      }).catch(() => {})
+      // #endregion
       const result = await platform.openDirectoryPickerDialog?.({
         title: "Open project",
         multiple: true,
       })
       resolve(result)
     } else {
+      // #region agent log
+      console.log("[DEBUG] Showing DialogSelectDirectory (remote)")
+      fetch("http://127.0.0.1:7246/ingest/3f780156-45fe-4e83-a393-57f8a6744add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: "home.tsx:chooseProject",
+          message: "Showing DialogSelectDirectory (remote)",
+          data: {},
+          timestamp: Date.now(),
+          sessionId: "debug-session",
+          hypothesisId: "A",
+        }),
+      }).catch(() => {})
+      // #endregion
       dialog.show(
         () => <DialogSelectDirectory multiple={true} onSelect={resolve} />,
         () => resolve(null),

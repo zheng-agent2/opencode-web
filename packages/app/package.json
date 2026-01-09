@@ -9,8 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsgo -b",
-    "start": "vite",
-    "dev": "vite",
+    "start": "NODE_OPTIONS='--max-http-header-size=32768' vite",
+    "dev": "NODE_OPTIONS='--max-http-header-size=32768' vite",
     "build": "vite build",
     "serve": "vite preview"
   },
